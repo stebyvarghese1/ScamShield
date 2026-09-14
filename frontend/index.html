@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScamShield — Personal Cybersecurity Assistant</title>
+  <meta name="description" content="Explainable detection and education for scams, phishing URLs, fake SMS, suspicious emails, QR quishing, and screenshots.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <!-- jsQR for client-side QR decoding support (Local vendor with CDN fallback) -->
+  <script src="/static/js/vendor/jsQR.min.js"></script>
+  <script>if (typeof window.jsQR === 'undefined') { document.write('<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"><\/script>'); }</script>
+  <!-- Tesseract.js for client-side Screenshot OCR (Local vendor with CDN fallback) -->
+  <script src="/static/js/vendor/tesseract.min.js"></script>
+  <script>if (typeof window.Tesseract === 'undefined') { document.write('<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"><\/script>'); }</script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon">
+          <span class="brand-icon-shield">🛡️</span>
+          <span class="brand-radar-ring"></span>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <h1>ScamShield</h1>
+          </div>
+          <p>Personal Cyber Defense & Threat Intelligence Platform</p>
+        </div>
+      </div>
+
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="nav-tabs">
+      <button class="tab-btn active" data-tab="url">
+        <span class="tab-icon">🔗</span>
+        <span>URL Radar</span>
+      </button>
+      <button class="tab-btn" data-tab="message">
+        <span class="tab-icon">📱</span>
+        <span>SMS & Chat</span>
+      </button>
+      <button class="tab-btn" data-tab="email">
+        <span class="tab-icon">📧</span>
+        <span>Email Analyzer</span>
+      </button>
+      <button class="tab-btn" data-tab="screenshot">
+        <span class="tab-icon">📸</span>
+        <span>Screenshot OCR</span>
+      </button>
+      <button class="tab-btn" data-tab="qr">
+        <span class="tab-icon">📷</span>
+        <span>QR Quishing</span>
+      </button>
+    </nav>
+
+    <!-- Main Workspace Grid -->
+    <div class="main-grid" id="main-grid">
+
+      <!-- LEFT: Scanner Inputs -->
+      <div class="scanner-container">
+
+        <!-- 1. URL SCANNER PANEL -->
+        <div class="panel-card scanner-panel" id="panel-url">
+          <h2>🔗 Inspect Suspicious Link or Domain</h2>
+          <p class="subtitle">Real-time deep scan for typosquatting, Punycode deception, malicious subdomains, and blacklists.</p>
+
+          <form id="form-url" onsubmit="ScannerApp.submitUrl(event)">
+            <div class="form-group">
+              <label for="input-url">Target Website URL or Domain</label>
+              <div class="input-with-icon">
+                <span class="field-icon">🌐</span>
+                <input type="text" id="input-url" class="form-control" placeholder="https://example.com/page or enter domain to inspect..." required autocomplete="off">
+              </div>
+            </div>
+            <button type="submit" class="btn-primary btn-scan-cyber" id="btn-url-scan">
+              <span class="btn-scan-laser"></span>
+              <span>🛡️ Run Full Threat Analysis</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 2. MESSAGE SCANNER PANEL -->
+        <div class="panel-card scanner-panel" id="panel-message" style="display: none;">
+          <h2>📱 Analyze SMS, WhatsApp or Telegram Message</h2>
+          <p class="subtitle">Scrutinizes psychological panic triggers, credential phishing prompts, fake lotteries, and job fraud.</p>
+
+          <form id="form-message" onsubmit="ScannerApp.submitMessage(event)">
+            <div class="form-group">
+              <label for="input-message">Message Content</label>
+              <textarea id="input-message" class="form-control" placeholder="Paste SMS, WhatsApp, or Telegram message text here..." required></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-scan-cyber" id="btn-message-scan">
+              <span class="btn-scan-laser"></span>
+              <span>🛡️ Analyze Message Deception Signals</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 3. EMAIL ANALYZER PANEL -->
+        <div class="panel-card scanner-panel" id="panel-email" style="display: none;">
+          <h2>📧 Email Authenticity & Header Inspector</h2>
+          <p class="subtitle">Uncovers display-name impersonation, mismatched Reply-To headers, and deceptive lookalike sender domains.</p>
+
+          <form id="form-email" onsubmit="ScannerApp.submitEmail(event)">
+            <div class="form-group">
+              <label for="input-email-sender">From (Display Name & Sender Email)</label>
+              <div class="input-with-icon">
+                <span class="field-icon">👤</span>
+                <input type="text" id="input-email-sender" class="form-control" placeholder='e.g., "Company Support" <support@company.com>'>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="input-email-reply">Reply-To Address (Optional Discrepancy Check)</label>
+              <div class="input-with-icon">
+                <span class="field-icon">↩️</span>
+                <input type="text" id="input-email-reply" class="form-control" placeholder="e.g., reply@company.com">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="input-email-subject">Subject Line</label>
+              <div class="input-with-icon">
+                <span class="field-icon">📋</span>
+                <input type="text" id="input-email-subject" class="form-control" placeholder="e.g., Account Notification or Security Alert">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="input-email-body">Email Body / Plain Text</label>
+              <textarea id="input-email-body" class="form-control" placeholder="Paste email body text here..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary btn-scan-cyber" id="btn-email-scan">
+              <span class="btn-scan-laser"></span>
+              <span>🛡️ Inspect Email Authenticity</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 4. SCREENSHOT OCR PANEL -->
+        <div class="panel-card scanner-panel" id="panel-screenshot" style="display: none;">
+          <h2>📸 Screenshot & Visual Scam Analyzer</h2>
+          <p class="subtitle">Upload or paste screenshots of suspicious chats, fake bank transaction receipts, or crypto charts.</p>
+
+          <form id="form-screenshot" onsubmit="ScannerApp.submitScreenshot(event)">
+            <div class="dropzone" id="screenshot-dropzone" onclick="document.getElementById('screenshot-file-input').click()">
+              <div class="dropzone-reticle"></div>
+              <div class="dropzone-icon">🖼️</div>
+              <p><strong>Click to browse</strong>, drag & drop, or press Ctrl+V to paste screenshot</p>
+              <small>PNG, JPG, WEBP supported · Client-side OCR + Server Vision Heuristics</small>
+              <input type="file" id="screenshot-file-input" accept="image/*" style="display: none;" onchange="ScannerApp.handleScreenshotFile(this.files[0])">
+            </div>
+
+            <!-- OCR Extraction Progress HUD -->
+            <div id="ocr-progress-container" style="display: none; margin-bottom: 16px; padding: 12px 16px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                <span id="ocr-status-text" style="color: var(--primary-cyan); font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                  <span class="pulse-dot"></span>
+                  <span>🔍 Initializing AI OCR Engine...</span>
+                </span>
+                <span id="ocr-percentage" style="color: var(--text-dim); font-family: monospace; font-weight: 700;">0%</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 9999px; overflow: hidden; position: relative;">
+                <div id="ocr-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #06b6d4, #3b82f6); border-radius: 9999px; transition: width 0.25s ease;"></div>
+              </div>
+            </div>
+
+            <div class="image-preview-box" id="screenshot-preview-box">
+              <img id="screenshot-preview-img" alt="Screenshot Preview">
+            </div>
+
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label for="screenshot-text-override" style="margin-bottom: 0;">Extracted / Accompanying Text</label>
+                <span id="ocr-badge-status" style="display: none; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);">✅ OCR Extracted</span>
+              </div>
+              <textarea id="screenshot-text-override" class="form-control" rows="5" placeholder="Text extracted from image will automatically appear here once OCR completes, or you can paste directly..."></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary btn-scan-cyber" id="btn-screenshot-scan">
+              <span class="btn-scan-laser"></span>
+              <span>🛡️ Evaluate Visual Fraud Indicators</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 5. QR CODE SCANNER PANEL -->
+        <div class="panel-card scanner-panel" id="panel-qr" style="display: none;">
+          <h2>📷 QR Code Safety & Quishing Detector</h2>
+          <p class="subtitle">Safely decode suspicious QR codes in your browser before your device opens malicious links.</p>
+
+          <!-- QR Mode Selection Bar -->
+          <div class="qr-action-row">
+            <button type="button" class="btn-qr-action" id="btn-qr-mode-camera" onclick="ScannerApp.openQrCamera()">
+              <span class="qr-action-icon">📹</span>
+              <div class="qr-action-text">
+                <strong>Open Live Camera</strong>
+                <small>Scan QR code directly with device webcam or phone camera</small>
+              </div>
+            </button>
+            <button type="button" class="btn-qr-action" id="btn-qr-mode-upload" onclick="ScannerApp.activateUploadMode()">
+              <span class="qr-action-icon">📁</span>
+              <div class="qr-action-text">
+                <strong>Upload Image File</strong>
+                <small>Browse or drop an image file (PNG, JPG, screenshot)</small>
+              </div>
+            </button>
+          </div>
+
+          <!-- Inline Camera Error Notice -->
+          <div id="qr-camera-error-banner" style="display: none; padding: 12px 16px; margin-bottom: 16px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.5; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #fecaca;"></div>
+
+          <!-- Live Camera Viewfinder HUD Box -->
+          <div class="camera-scanner-box" id="qr-camera-container" style="display: none;">
+            <div class="camera-viewport-wrap">
+              <video id="qr-camera-video" playsinline autoplay muted></video>
+              <canvas id="qr-camera-canvas" style="display: none;"></canvas>
+              
+              <div class="camera-hud-overlay">
+                <div class="camera-reticle-frame">
+                  <div class="hud-corner top-left"></div>
+                  <div class="hud-corner top-right"></div>
+                  <div class="hud-corner bottom-left"></div>
+                  <div class="hud-corner bottom-right"></div>
+                  <div class="camera-laser-scan"></div>
+                </div>
+                <div class="camera-status-pill">
+                  <span class="pulse-dot"></span>
+                  <span id="camera-status-text">Align QR code within cyber reticle...</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="camera-controls-bar">
+              <button type="button" class="btn-secondary btn-cam-control" onclick="ScannerApp.stopQrCamera()">
+                <span>⏹️ Close Camera</span>
+              </button>
+              <button type="button" class="btn-primary btn-cam-control" id="btn-capture-camera" onclick="ScannerApp.captureCurrentCameraFrame()">
+                <span>📸 Capture Frame</span>
+              </button>
+              <button type="button" class="btn-secondary btn-cam-control" id="btn-flip-camera" onclick="ScannerApp.cycleCameraDevice()">
+                <span id="flip-camera-label">🔄 Switch Camera</span>
+              </button>
+            </div>
+          </div>
+
+          <form id="form-qr" onsubmit="ScannerApp.submitQr(event)">
+            <div class="dropzone" id="qr-dropzone" onclick="document.getElementById('qr-file-input').click()">
+              <div class="dropzone-reticle"></div>
+              <div class="dropzone-icon">📷</div>
+              <p><strong>Drop QR code image here</strong> or click to browse</p>
+              <small>ScamShield decodes destination URL instantly in your browser</small>
+              <input type="file" id="qr-file-input" accept="image/*" style="display: none;" onchange="ScannerApp.handleQrFile(this.files[0])">
+            </div>
+
+            <div class="image-preview-box" id="qr-preview-box">
+              <img id="qr-preview-img" alt="QR Preview">
+            </div>
+
+            <div class="form-group">
+              <label for="qr-payload-input">Decoded QR Destination / Payload</label>
+              <div class="input-with-icon">
+                <span class="field-icon">🎯</span>
+                <input type="text" id="qr-payload-input" class="form-control" placeholder="Decoded URL or QR content will appear here, or enter manually..." required>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary btn-scan-cyber" id="btn-qr-scan">
+              <span class="btn-scan-laser"></span>
+              <span>🛡️ Verify QR Code Destination</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Explainable Result Panel (Redesigned Cyber Diagnostic Dashboard) -->
+      <div class="panel-card result-panel" id="result-panel">
+        
+        <!-- 1. Top Diagnostic Header / HUD -->
+        <div class="result-hud-card" id="result-hud-card">
+          <div class="hud-top-bar">
+            <div class="hud-target-pill" id="result-target-pill" title="Target Inspected">
+              <span class="hud-target-icon" id="result-target-icon">🌐</span>
+              <span class="hud-target-text" id="result-target-text">—</span>
+              <button type="button" class="btn-copy-target" id="btn-copy-target" onclick="App.copyTargetIndicator()" title="Copy target">
+                <span id="copy-target-icon">📋</span>
+              </button>
+            </div>
+            <div class="hud-confidence-badge" id="result-confidence-badge">
+              <span class="pulse-dot"></span>
+              <span id="result-confidence-text">95% Confidence</span>
+            </div>
+          </div>
+
+          <div class="hud-main-grid">
+            <!-- Left: High-Tech Gauge & Radial Speedometer -->
+            <div class="gauge-wrapper-modern">
+              <svg class="gauge-svg-modern" viewBox="0 0 180 180">
+                <defs>
+                  <linearGradient id="gaugeSafeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981" />
+                    <stop offset="100%" stop-color="#06b6d4" />
+                  </linearGradient>
+                  <linearGradient id="gaugeWarnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f59e0b" />
+                    <stop offset="100%" stop-color="#fb923c" />
+                  </linearGradient>
+                  <linearGradient id="gaugeDangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f43f5e" />
+                    <stop offset="100%" stop-color="#ef4444" />
+                  </linearGradient>
+                  <filter id="gaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="6" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+                <circle class="gauge-track" cx="90" cy="90" r="74"></circle>
+                <circle class="gauge-ticks" cx="90" cy="90" r="74"></circle>
+                <circle class="gauge-fill-glow" id="gauge-fill-glow" cx="90" cy="90" r="74" filter="url(#gaugeGlow)"></circle>
+                <circle class="gauge-fill-modern" id="gauge-fill" cx="90" cy="90" r="74"></circle>
+              </svg>
+              <div class="gauge-core">
+                <span class="gauge-score-value" id="result-score">0</span>
+                <span class="gauge-score-scale">/ 100 RISK</span>
+                <span class="gauge-risk-descriptor" id="result-risk-descriptor">CLEAN</span>
+              </div>
+            </div>
+
+            <!-- Right: Verdict, Taxonomy & Signals Overview -->
+            <div class="hud-verdict-summary">
+              <div class="verdict-banner-modern SAFE" id="result-badge">
+                <span class="verdict-icon" id="result-badge-icon">🛡️</span>
+                <span class="verdict-text" id="result-badge-text">VERIFIED SAFE</span>
+              </div>
+              <div class="hud-category-row">
+                <span class="hud-label">Classification:</span>
+                <span class="hud-category-tag" id="result-category">CLEAN / SAFE</span>
+              </div>
+              
+              <!-- Mini telemetry metrics -->
+              <div class="hud-telemetry-row">
+                <div class="telemetry-pill danger">
+                  <span class="tele-val" id="tele-critical-count">0</span>
+                  <span class="tele-lbl">Critical</span>
+                </div>
+                <div class="telemetry-pill warning">
+                  <span class="tele-val" id="tele-high-count">0</span>
+                  <span class="tele-lbl">High</span>
+                </div>
+                <div class="telemetry-pill info">
+                  <span class="tele-val" id="tele-med-count">0</span>
+                  <span class="tele-lbl">Medium</span>
+                </div>
+                <div class="telemetry-pill success">
+                  <span class="tele-val" id="tele-feeds-count">10</span>
+                  <span class="tele-lbl">Feeds</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Actionable Directive Recommendation Box -->
+        <div class="directive-box-modern SAFE" id="result-recommendation-box">
+          <div class="directive-icon-circle" id="result-rec-icon">✅</div>
+          <div class="directive-content">
+            <div class="directive-header">
+              <span class="directive-tag">SECURITY DIRECTIVE</span>
+              <h4 id="result-rec-title">NO THREAT DETECTED</h4>
+            </div>
+            <p id="result-rec-desc">This item has passed heuristic and global threat intelligence checks.</p>
+          </div>
+        </div>
+
+        <!-- 3. Result Sub-Navigation Tabs -->
+        <div class="result-subtabs-bar">
+          <button type="button" class="res-subtab active" data-subtab="overview" onclick="App.switchResultSubtab('overview')">
+            <span>📌 Overview</span>
+          </button>
+          <button type="button" class="res-subtab" data-subtab="feeds" onclick="App.switchResultSubtab('feeds')">
+            <span>⚡ Threat Feeds (<span id="res-feeds-active-badge">10 Active</span>)</span>
+          </button>
+          <button type="button" class="res-subtab" data-subtab="evidence" onclick="App.switchResultSubtab('evidence')">
+            <span>🔍 Evidence & Findings (<span id="res-findings-count-badge">0</span>)</span>
+          </button>
+          <button type="button" class="res-subtab" data-subtab="actions" onclick="App.switchResultSubtab('actions')">
+            <span>🛡️ Defense Checklist</span>
+          </button>
+        </div>
+
+        <!-- 4. Subtab Panels Container -->
+        <div class="result-subtab-panels">
+
+          <!-- SUBTAB 1: Overview -->
+          <div class="res-panel active" id="subpanel-overview">
+            <div class="overview-grid">
+              <div class="overview-card">
+                <div class="oc-header">
+                  <span class="oc-icon">🧠</span>
+                  <h4>Security Assessment Summary</h4>
+                </div>
+                <p id="overview-summary-text">
+                  Scan complete. No high-risk signals detected across threat intelligence feeds.
+                </p>
+              </div>
+
+              <div class="overview-card">
+                <div class="oc-header">
+                  <span class="oc-icon">💡</span>
+                  <h4>Cyber Defense Insight</h4>
+                </div>
+                <p id="result-educational-tip">
+                  Always verify unknown links and senders through official verified channels.
+                </p>
+              </div>
+            </div>
+
+            <!-- Quick Signals Highlights -->
+            <div class="quick-signals-box">
+              <div class="qs-header">
+                <h4>Signal Highlights</h4>
+                <span id="qs-count-badge" class="qs-badge">0 signals</span>
+              </div>
+              <div id="quick-signals-list" class="quick-signals-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 2: Threat Feeds Matrix (10 APIs) -->
+          <div class="res-panel" id="subpanel-feeds" style="display: none;">
+            <div class="threat-matrix-header">
+              <div>
+                <h4>Multi-Provider Global Feed Cross-Check</h4>
+                <p>Live results across all 10 integrated threat databases and intelligence networks.</p>
+              </div>
+              <button type="button" class="btn-secondary" onclick="App.openIntegrationsModal()" style="padding: 6px 12px; font-size: 11px;">
+                ⚡ Feed Keys
+              </button>
+            </div>
+            <div class="threat-feeds-result-grid" id="threat-feeds-result-grid">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- SUBTAB 3: Detailed Evidence & Findings (With Filter Pills) -->
+          <div class="res-panel" id="subpanel-evidence" style="display: none;">
+            <!-- Severity Filter Pills -->
+            <div class="findings-filter-row">
+              <span class="filter-label">Filter:</span>
+              <div class="filter-pills-wrap">
+                <button type="button" class="filter-pill active" data-filter="all" onclick="App.filterFindings('all')">All (<span id="filter-count-all">0</span>)</button>
+                <button type="button" class="filter-pill danger" data-filter="high" onclick="App.filterFindings('high')">Critical & High (<span id="filter-count-high">0</span>)</button>
+                <button type="button" class="filter-pill warning" data-filter="medium" onclick="App.filterFindings('medium')">Medium (<span id="filter-count-med">0</span>)</button>
+                <button type="button" class="filter-pill info" data-filter="info" onclick="App.filterFindings('info')">Info (<span id="filter-count-info">0</span>)</button>
+              </div>
+            </div>
+
+            <!-- Findings List -->
+            <div id="findings-list" class="findings-list-modern">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- SUBTAB 4: Action Checklist & Defense -->
+          <div class="res-panel" id="subpanel-actions" style="display: none;">
+            <div class="action-checklist-container">
+              <div class="checklist-header">
+                <h4>Recommended Incident Response Steps</h4>
+                <p>Follow these safety countermeasures to protect your identity, accounts, and devices.</p>
+              </div>
+              <div class="checklist-items" id="checklist-items">
+                <!-- Customized checklist rendered via JS based on risk category -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 5. Bottom Result Utility Toolbar -->
+        <div class="result-footer-toolbar">
+          <div class="rf-left">
+            <button type="button" class="btn-toolbar" id="btn-copy-report" onclick="App.copyThreatReport()">
+              <span id="btn-copy-report-icon">📋</span>
+              <span id="btn-copy-report-text">Copy Threat Report</span>
+            </button>
+            <button type="button" class="btn-toolbar" id="btn-rescan-target" onclick="App.reScanCurrentTarget()">
+              <span>🔄 Re-Scan</span>
+            </button>
+          </div>
+          <div class="rf-right">
+            <span class="report-hash" id="result-report-time">Generated: Just now</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Threat Intelligence Integrations Modal (10 APIs) -->
+  <div class="modal-overlay" id="integrations-modal" style="display: none;">
+    <div class="modal-card" style="max-width: 680px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <div>
+          <h3>⚡ Global Threat Intelligence Feeds (10 APIs)</h3>
+          <p style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Real-time threat feeds configured directly in your root <code>.env</code> file.</p>
+        </div>
+        <button type="button" class="modal-close" onclick="App.closeIntegrationsModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="overflow-y: auto; flex: 1;">
+        <!-- Providers Overview Grid -->
+        <h4 style="font-size: 13px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.5px;">Live Provider Network</h4>
+        <div id="providers-list-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px;">
+          <!-- Loaded dynamically via JS -->
+        </div>
+
+        <!-- Provider Key Configuration -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 18px;">
+          <h4 style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px;">Configure Threat Intelligence API Key</h4>
+          
+          <div class="form-group">
+            <label for="provider-select">Select Security Provider</label>
+            <select id="provider-select" class="form-control" onchange="App.onProviderSelectChange()">
+              <option value="virustotal">VirusTotal v3 (70+ Antivirus Engines)</option>
+              <option value="google_safebrowsing">Google Safe Browsing v4 (Official Google Blacklist)</option>
+              <option value="abuseipdb">AbuseIPDB (Malicious IP Reputation)</option>
+              <option value="urlhaus">URLhaus (abuse.ch Malware URLs)</option>
+              <option value="threatfox">ThreatFox (abuse.ch IOCs & Botnets)</option>
+              <option value="alienvault_otx">AlienVault OTX (Threat Pulses)</option>
+              <option value="phishtank">PhishTank (Community Phishing App Key)</option>
+              <option value="hibp">Have I Been Pwned (Email Account Breaches)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="provider-api-key-input" id="provider-key-label">API Key</label>
+            <input type="password" id="provider-api-key-input" class="form-control" placeholder="Paste your API or Auth key here...">
+            <small id="provider-help-text" style="display: block; margin-top: 6px; color: var(--text-dim); line-height: 1.4;">
+              Free personal tier available. Synchronized directly with your local .env file.
+            </small>
+          </div>
+
+          <div id="integration-feedback" style="display: none; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;"></div>
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button type="button" class="btn-secondary" id="btn-clear-provider" onclick="App.clearSelectedProviderKey()" style="display: none; color: #f87171;">Clear Key</button>
+            <button type="button" class="btn-secondary" id="btn-test-provider" onclick="App.testSelectedProviderKey()">Test Connection</button>
+            <button type="button" class="btn-primary" id="btn-save-provider" style="width: auto; padding: 10px 22px;" onclick="App.saveSelectedProviderKey()">Save Key to .env</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <span style="font-size: 12px; color: var(--text-dim);">Keys written directly to <code>.env</code> · In-memory processing · Zero database</span>
+        <button type="button" class="btn-secondary" onclick="App.closeIntegrationsModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/scanner.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
